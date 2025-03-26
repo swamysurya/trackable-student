@@ -4,115 +4,44 @@ import { getDatabase } from './mongoDb';
 // We need to define delay directly in this file instead of importing it
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Sample student data for initial setup if no data exists in MongoDB
-const sampleStudentsData = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    password: 'password123',
-    overallProgress: 35,
-    courses: [
-      { id: '1', name: 'Introduction to Web Development', progress: 60 },
-      { id: '2', name: 'Advanced JavaScript', progress: 25 },
-      { id: '3', name: 'React Fundamentals', progress: 10 },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    password: 'password123',
-    overallProgress: 72,
-    courses: [
-      { id: '1', name: 'Introduction to Web Development', progress: 100 },
-      { id: '2', name: 'Advanced JavaScript', progress: 85 },
-      { id: '3', name: 'React Fundamentals', progress: 30 },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Robert Johnson',
-    email: 'robert@example.com',
-    password: 'password123',
-    overallProgress: 45,
-    courses: [
-      { id: '1', name: 'Introduction to Web Development', progress: 75 },
-      { id: '2', name: 'Advanced JavaScript', progress: 40 },
-      { id: '3', name: 'React Fundamentals', progress: 20 },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Emily Davis',
-    email: 'emily@example.com',
-    password: 'password123',
-    overallProgress: 90,
-    courses: [
-      { id: '1', name: 'Introduction to Web Development', progress: 100 },
-      { id: '2', name: 'Advanced JavaScript', progress: 95 },
-      { id: '3', name: 'React Fundamentals', progress: 75 },
-    ],
-  },
-  {
-    id: '5',
-    name: 'Michael Wilson',
-    email: 'michael@example.com',
-    password: 'password123',
-    overallProgress: 20,
-    courses: [
-      { id: '1', name: 'Introduction to Web Development', progress: 40 },
-      { id: '2', name: 'Advanced JavaScript', progress: 15 },
-      { id: '3', name: 'React Fundamentals', progress: 5 },
-    ],
-  },
-];
-
-// Sample courses data for initial setup
-const sampleCoursesData = [
-  { 
-    id: '1', 
-    name: 'Introduction to Web Development', 
-    description: 'Learn the basics of web development including HTML, CSS, and JavaScript.',
-    prerequisites: 'None',
-    estimatedTime: '6 weeks',
-    studentsCount: 5, 
-    averageProgress: 75 
-  },
-  { 
-    id: '2', 
-    name: 'Advanced JavaScript', 
-    description: 'Dive deeper into JavaScript with advanced concepts like closures, prototypes, and async programming.',
-    prerequisites: 'Basic JavaScript knowledge',
-    estimatedTime: '8 weeks',
-    studentsCount: 5, 
-    averageProgress: 52 
-  },
-  { 
-    id: '3', 
-    name: 'React Fundamentals', 
-    description: 'Learn the fundamentals of React, including components, state, and props.',
-    prerequisites: 'JavaScript proficiency',
-    estimatedTime: '10 weeks',
-    studentsCount: 5, 
-    averageProgress: 28 
-  },
-];
-
 // Helper function to ensure collections are setup
 const ensureCollectionsSetup = async () => {
   const db = getDatabase();
   
-  // Check if students collection exists and has data
-  const studentsCount = await db.collection('students').countDocuments();
-  if (studentsCount === 0) {
-    await db.collection('students').insertMany(sampleStudentsData);
-    console.log('Initialized students collection with sample data');
-  }
-  
   // Check if courses collection exists and has data
   const coursesCount = await db.collection('courses').countDocuments();
   if (coursesCount === 0) {
+    // Sample courses data for initial setup
+    const sampleCoursesData = [
+      { 
+        id: '1', 
+        name: 'Introduction to Web Development', 
+        description: 'Learn the basics of web development including HTML, CSS, and JavaScript.',
+        prerequisites: 'None',
+        estimatedTime: '6 weeks',
+        studentsCount: 0, 
+        averageProgress: 0 
+      },
+      { 
+        id: '2', 
+        name: 'Advanced JavaScript', 
+        description: 'Dive deeper into JavaScript with advanced concepts like closures, prototypes, and async programming.',
+        prerequisites: 'Basic JavaScript knowledge',
+        estimatedTime: '8 weeks',
+        studentsCount: 0, 
+        averageProgress: 0 
+      },
+      { 
+        id: '3', 
+        name: 'React Fundamentals', 
+        description: 'Learn the fundamentals of React, including components, state, and props.',
+        prerequisites: 'JavaScript proficiency',
+        estimatedTime: '10 weeks',
+        studentsCount: 0, 
+        averageProgress: 0 
+      },
+    ];
+    
     await db.collection('courses').insertMany(sampleCoursesData);
     console.log('Initialized courses collection with sample data');
   }
@@ -125,7 +54,26 @@ export const getAllStudents = async () => {
     await ensureCollectionsSetup();
     
     const students = await db.collection('students').find().toArray();
-    return students;
+    
+    // Process students to ensure they have courses
+    const processedStudents = await Promise.all(students.map(async (student) => {
+      // If student doesn't have courses, assign empty array
+      if (!student.courses) {
+        student.courses = [];
+      }
+      
+      // If student doesn't have overall progress, calculate it
+      if (student.overallProgress === undefined) {
+        const courses = student.courses || [];
+        student.overallProgress = courses.length > 0 
+          ? Math.round(courses.reduce((sum: number, c: any) => sum + (c.progress || 0), 0) / courses.length) 
+          : 0;
+      }
+      
+      return student;
+    }));
+    
+    return processedStudents;
   } catch (error) {
     console.error('Error fetching students from MongoDB:', error);
     throw error;
@@ -141,6 +89,19 @@ export const getStudentById = async (studentId: string) => {
     
     if (!student) {
       throw new Error('Student not found');
+    }
+    
+    // Ensure student has courses
+    if (!student.courses) {
+      student.courses = [];
+    }
+    
+    // If student doesn't have overall progress, calculate it
+    if (student.overallProgress === undefined) {
+      const courses = student.courses || [];
+      student.overallProgress = courses.length > 0 
+        ? Math.round(courses.reduce((sum: number, c: any) => sum + (c.progress || 0), 0) / courses.length) 
+        : 0;
     }
     
     return student;
@@ -188,41 +149,63 @@ export const getStudentAnalytics = async () => {
     const totalStudents = students.length;
     
     // Calculate average progress across all students
-    const averageProgress = Math.round(
-      students.reduce((sum, student) => sum + student.overallProgress, 0) / totalStudents
-    );
+    const averageProgress = totalStudents > 0 
+      ? Math.round(
+          students.reduce((sum, student) => sum + (student.overallProgress || 0), 0) / totalStudents
+        )
+      : 0;
     
     // Get top performers (top 2 students by progress)
     const topPerformers = students
-      .sort((a, b) => b.overallProgress - a.overallProgress)
+      .sort((a, b) => (b.overallProgress || 0) - (a.overallProgress || 0))
       .slice(0, 2)
       .map(student => ({
         id: student.id,
         name: student.name,
-        progress: student.overallProgress
+        progress: student.overallProgress || 0
       }));
     
     // Get struggling students (students with progress < 30%)
     const strugglingStudents = students
-      .filter(student => student.overallProgress < 30)
+      .filter(student => (student.overallProgress || 0) < 30)
       .map(student => ({
         id: student.id,
         name: student.name,
-        progress: student.overallProgress
+        progress: student.overallProgress || 0
       }));
+    
+    // Calculate course statistics
+    const coursesBreakdown = courses.map(course => {
+      // Get all students enrolled in this course
+      const studentsInCourse = students.filter(student => 
+        (student.courses || []).some((c: any) => c.id === course.id)
+      );
+      
+      // Calculate average progress for this course
+      const averageCourseProgress = studentsInCourse.length > 0
+        ? Math.round(
+            studentsInCourse.reduce((sum, student) => {
+              const courseData = (student.courses || []).find((c: any) => c.id === course.id);
+              return sum + (courseData?.progress || 0);
+            }, 0) / studentsInCourse.length
+          )
+        : 0;
+      
+      return {
+        id: course.id,
+        name: course.name,
+        studentsCount: studentsInCourse.length,
+        averageProgress: averageCourseProgress,
+        description: course.description,
+        prerequisites: course.prerequisites,
+        estimatedTime: course.estimatedTime
+      };
+    });
     
     return {
       totalStudents,
       averageProgress,
-      coursesBreakdown: courses.map(course => ({
-        id: course.id,
-        name: course.name,
-        studentsCount: course.studentsCount || 0,
-        averageProgress: course.averageProgress || 0,
-        description: course.description,
-        prerequisites: course.prerequisites,
-        estimatedTime: course.estimatedTime
-      })),
+      coursesBreakdown,
       topPerformers,
       strugglingStudents,
     };
@@ -308,7 +291,7 @@ export const deleteCourse = async (courseId: string) => {
   }
 };
 
-// New function to add a student
+// Function to add a student
 export const addStudent = async (studentData: any) => {
   try {
     const db = getDatabase();
@@ -351,7 +334,7 @@ export const updateStudentProgress = async (studentId: string, courseId: string,
     }
     
     // Check if the student already has progress for this course
-    const courseIndex = student.courses.findIndex((c: any) => c.id === courseId);
+    const courseIndex = (student.courses || []).findIndex((c: any) => c.id === courseId);
     
     if (courseIndex >= 0) {
       // Update existing course progress
@@ -376,10 +359,13 @@ export const updateStudentProgress = async (studentId: string, courseId: string,
     
     // Update overall progress (average of all courses)
     const updatedStudent = await db.collection('students').findOne({ id: studentId });
-    const overallProgress = Math.round(
-      updatedStudent.courses.reduce((sum: number, c: any) => sum + c.progress, 0) / 
-      updatedStudent.courses.length
-    );
+    const courses = updatedStudent.courses || [];
+    const overallProgress = courses.length > 0
+      ? Math.round(
+          courses.reduce((sum: number, c: any) => sum + c.progress, 0) / 
+          courses.length
+        )
+      : 0;
     
     await db.collection('students').updateOne(
       { id: studentId },
@@ -392,13 +378,13 @@ export const updateStudentProgress = async (studentId: string, courseId: string,
       .toArray();
     
     const studentsWithThisCourse = allStudentsForCourse.filter(s => 
-      s.courses.some((c: any) => c.id === courseId)
+      (s.courses || []).some((c: any) => c.id === courseId)
     );
     
     const courseAverageProgress = studentsWithThisCourse.length > 0
       ? Math.round(
           studentsWithThisCourse.reduce((sum, s) => {
-            const courseProgress = s.courses.find((c: any) => c.id === courseId)?.progress || 0;
+            const courseProgress = (s.courses || []).find((c: any) => c.id === courseId)?.progress || 0;
             return sum + courseProgress;
           }, 0) / studentsWithThisCourse.length
         )
