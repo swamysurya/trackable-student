@@ -36,14 +36,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (token) {
           const userData = await getCurrentUser();
           // Ensure user data has the correct role type
-          setUser({
+          const userWithRole = {
             ...userData,
             role: userData.role as 'Admin' | 'Student'
-          });
+          };
+          setUser(userWithRole);
+          localStorage.setItem('user_role', userWithRole.role);
         }
       } catch (error) {
         console.error('Authentication error:', error);
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_role');
       } finally {
         setIsLoading(false);
       }
@@ -59,11 +62,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await login(email, password);
       localStorage.setItem('auth_token', response.token);
       // Ensure user data has the correct role type
-      setUser({
+      const userWithRole = {
         ...response.user,
         role: response.user.role as 'Admin' | 'Student'
-      });
-      navigate('/dashboard');
+      };
+      setUser(userWithRole);
+      localStorage.setItem('user_role', userWithRole.role);
+
+      // Redirect based on role
+      if (userWithRole.role === 'Admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+      
       toast({
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
@@ -88,10 +100,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await register(name, email, password);
       localStorage.setItem('auth_token', response.token);
       // Ensure user data has the correct role type
-      setUser({
+      const userWithRole = {
         ...response.user,
         role: response.user.role as 'Admin' | 'Student'
-      });
+      };
+      setUser(userWithRole);
+      localStorage.setItem('user_role', userWithRole.role);
+      
       navigate('/dashboard');
       toast({
         title: 'Account created',
@@ -112,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logoutUser = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_role');
     setUser(null);
     navigate('/');
     toast({
