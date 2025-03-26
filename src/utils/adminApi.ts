@@ -388,22 +388,28 @@ export const updateStudentProgress = async (studentId: string, courseId: string,
     
     // Update course's average progress
     const allStudentsForCourse = await db.collection('students')
-      .find({ "courses.id": courseId })
+      .find()
       .toArray();
     
-    const courseAverageProgress = Math.round(
-      allStudentsForCourse.reduce((sum, s) => {
-        const courseProgress = s.courses.find((c: any) => c.id === courseId)?.progress || 0;
-        return sum + courseProgress;
-      }, 0) / allStudentsForCourse.length
+    const studentsWithThisCourse = allStudentsForCourse.filter(s => 
+      s.courses.some((c: any) => c.id === courseId)
     );
+    
+    const courseAverageProgress = studentsWithThisCourse.length > 0
+      ? Math.round(
+          studentsWithThisCourse.reduce((sum, s) => {
+            const courseProgress = s.courses.find((c: any) => c.id === courseId)?.progress || 0;
+            return sum + courseProgress;
+          }, 0) / studentsWithThisCourse.length
+        )
+      : 0;
     
     await db.collection('courses').updateOne(
       { id: courseId },
       { 
         $set: { 
           averageProgress: courseAverageProgress,
-          studentsCount: allStudentsForCourse.length 
+          studentsCount: studentsWithThisCourse.length 
         } 
       }
     );
