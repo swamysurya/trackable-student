@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Edit, Save, Trash2 } from 'lucide-react';
@@ -25,21 +25,23 @@ const AdminCourseDetail = () => {
   
   const { data, isLoading } = useQuery({
     queryKey: ['courseDetails', courseId],
-    queryFn: getStudentAnalytics,
-    onSuccess: (data) => {
-      if (data?.coursesBreakdown) {
-        const course = data.coursesBreakdown.find((c: any) => c.id === courseId);
-        if (course) {
-          setCourseData({
-            name: course.name,
-            description: course.description || 'A comprehensive course for students',
-            prerequisites: 'None',
-            estimatedTime: '8 weeks',
-          });
-        }
-      }
-    },
+    queryFn: getStudentAnalytics
   });
+  
+  // Move the onSuccess logic to a useEffect that depends on the data
+  useEffect(() => {
+    if (data?.coursesBreakdown) {
+      const course = data.coursesBreakdown.find((c: any) => c.id === courseId);
+      if (course) {
+        setCourseData({
+          name: course.name,
+          description: course.description || 'A comprehensive course for students',
+          prerequisites: 'None',
+          estimatedTime: '8 weeks',
+        });
+      }
+    }
+  }, [data, courseId]);
   
   const handleSave = async () => {
     try {
