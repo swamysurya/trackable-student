@@ -35,7 +35,7 @@ const AdminCourseDetail = () => {
       if (course) {
         setCourseData({
           name: course.name,
-          description: course.description || 'A comprehensive course for students',
+          description: 'A comprehensive course for students', // Set a default description since it's not in the API response
           prerequisites: 'None',
           estimatedTime: '8 weeks',
         });
