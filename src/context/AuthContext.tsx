@@ -35,7 +35,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = localStorage.getItem('auth_token');
         if (token) {
           const userData = await getCurrentUser();
-          setUser(userData);
+          // Ensure user data has the correct role type
+          setUser({
+            ...userData,
+            role: userData.role as 'Admin' | 'Student'
+          });
         }
       } catch (error) {
         console.error('Authentication error:', error);
@@ -54,7 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // In a real app, this would be an API call
       const response = await login(email, password);
       localStorage.setItem('auth_token', response.token);
-      setUser(response.user);
+      // Ensure user data has the correct role type
+      setUser({
+        ...response.user,
+        role: response.user.role as 'Admin' | 'Student'
+      });
       navigate('/dashboard');
       toast({
         title: 'Welcome back!',
@@ -79,7 +87,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // In a real app, this would be an API call
       const response = await register(name, email, password);
       localStorage.setItem('auth_token', response.token);
-      setUser(response.user);
+      // Ensure user data has the correct role type
+      setUser({
+        ...response.user,
+        role: response.user.role as 'Admin' | 'Student'
+      });
       navigate('/dashboard');
       toast({
         title: 'Account created',
