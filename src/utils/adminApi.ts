@@ -1,5 +1,6 @@
 
-import { delay } from './api';
+// We need to define delay directly in this file instead of importing it
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Mock student data with progress
 const mockStudentsProgress = [

@@ -54,7 +54,10 @@ const StudentCard: React.FC<StudentCardProps> = ({
             <Progress 
               value={progress} 
               className="h-2"
-              indicatorClassName={getProgressColor(progress)}
+              // Fix: use className with custom styles instead of indicatorClassName
+              style={{ 
+                '--progress-foreground': getProgressColor(progress).replace('bg-', 'var(--') + ')',
+              } as React.CSSProperties}
             />
           </div>
           

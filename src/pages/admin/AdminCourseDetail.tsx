@@ -1,42 +1,67 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronLeft, Edit, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, BookOpen, Users, Edit, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import AdminNavbar from '@/components/admin/AdminNavbar';
-import { getCourseById, getStudentAnalytics } from '@/utils/api';
+import { getStudentAnalytics, updateCourse, deleteCourse } from '@/utils/adminApi';
 import { useToast } from '@/hooks/use-toast';
-import { deleteCourse } from '@/utils/adminApi';
 
 const AdminCourseDetail = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const { data: course, isLoading: isLoadingCourse } = useQuery({
-    queryKey: ['course', courseId],
-    queryFn: () => getCourseById(courseId || ''),
-    enabled: !!courseId,
+  const [isEditing, setIsEditing] = useState(false);
+  const [courseData, setCourseData] = useState({
+    name: '',
+    description: '',
+    prerequisites: '',
+    estimatedTime: '',
   });
   
-  const { data: analytics, isLoading: isLoadingAnalytics } = useQuery({
-    queryKey: ['courseAnalytics'],
+  const { data, isLoading } = useQuery({
+    queryKey: ['courseDetails', courseId],
     queryFn: getStudentAnalytics,
+    onSuccess: (data) => {
+      if (data?.coursesBreakdown) {
+        const course = data.coursesBreakdown.find((c: any) => c.id === courseId);
+        if (course) {
+          setCourseData({
+            name: course.name,
+            description: course.description || 'A comprehensive course for students',
+            prerequisites: 'None',
+            estimatedTime: '8 weeks',
+          });
+        }
+      }
+    },
   });
   
-  const isLoading = isLoadingCourse || isLoadingAnalytics;
+  const handleSave = async () => {
+    try {
+      await updateCourse(courseId as string, courseData);
+      setIsEditing(false);
+      toast({
+        title: 'Course updated',
+        description: 'The course has been successfully updated.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update the course. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
   
-  const courseAnalytics = analytics?.coursesBreakdown?.find(c => c.id === courseId);
-  
-  const handleDeleteCourse = async () => {
-    if (!courseId) return;
-    
-    if (confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this course?')) {
       try {
-        await deleteCourse(courseId);
+        await deleteCourse(courseId as string);
         toast({
           title: 'Course deleted',
           description: 'The course has been successfully deleted.',
@@ -52,163 +77,136 @@ const AdminCourseDetail = () => {
     }
   };
   
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <AdminNavbar />
-        <main className="container mx-auto px-4 py-16 mt-10">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-  
-  if (!course) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <AdminNavbar />
-        <main className="container mx-auto px-4 py-16 mt-10">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Course not found</h1>
-            <Button onClick={() => navigate('/admin/courses')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Courses
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const selectedCourse = data?.coursesBreakdown?.find((c: any) => c.id === courseId);
   
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNavbar />
       
       <main className="container mx-auto px-4 py-16 mt-10">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/admin/courses')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Courses
-          </Button>
-          
-          <div className="flex items-center gap-3 mt-4 md:mt-0">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`/admin/courses/${courseId}/edit`)}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Course
-            </Button>
-            
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteCourse}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Course
-            </Button>
-          </div>
-        </div>
+        <Button 
+          variant="ghost" 
+          className="mb-6"
+          onClick={() => navigate('/admin/courses')}
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Back to Courses
+        </Button>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1">
-            <CardHeader className="flex flex-row items-start justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-2xl font-bold">Course Details</CardTitle>
-                <CardDescription>Information about this course</CardDescription>
+        {isLoading ? (
+          <div className="animate-pulse">
+            <div className="h-10 w-1/3 bg-gray-200 rounded mb-4"></div>
+            <div className="h-40 bg-gray-200 rounded mb-6"></div>
+            <div className="h-8 w-48 bg-gray-200 rounded"></div>
+          </div>
+        ) : selectedCourse ? (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h1 className="text-3xl font-bold">
+                {isEditing ? (
+                  <Input 
+                    value={courseData.name}
+                    onChange={e => setCourseData({...courseData, name: e.target.value})}
+                    className="text-3xl font-bold h-auto py-1 px-2"
+                  />
+                ) : (
+                  courseData.name
+                )}
+              </h1>
+              
+              <div className="flex space-x-2">
+                {isEditing ? (
+                  <Button onClick={handleSave}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </Button>
+                ) : (
+                  <Button onClick={() => setIsEditing(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Course
+                  </Button>
+                )}
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
               </div>
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Course Name</h3>
-                  <p className="text-lg font-medium">{course.name}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
-                  <p className="text-base">{course.description}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Prerequisites</h3>
-                  {course.prerequisites.length > 0 ? (
-                    <ul className="list-disc pl-5 space-y-1">
-                      {course.prerequisites.map((prereq, index) => (
-                        <li key={index} className="text-base">{prereq}</li>
-                      ))}
-                    </ul>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 space-y-6">
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">Description</h2>
+                  {isEditing ? (
+                    <Textarea 
+                      value={courseData.description}
+                      onChange={e => setCourseData({...courseData, description: e.target.value})}
+                      className="min-h-[150px]"
+                    />
                   ) : (
-                    <p className="text-base">None</p>
+                    <p className="text-gray-700">{courseData.description}</p>
                   )}
                 </div>
                 
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Estimated Time</h3>
-                  <p className="text-base">{course.estimatedTime}</p>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">Prerequisites</h2>
+                  {isEditing ? (
+                    <Input 
+                      value={courseData.prerequisites}
+                      onChange={e => setCourseData({...courseData, prerequisites: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-gray-700">{courseData.prerequisites}</p>
+                  )}
                 </div>
                 
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Student Enrollment</h3>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-primary" />
-                    <p className="text-base">{courseAnalytics?.studentsCount || 0} students enrolled</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Average Progress</h3>
-                  <p className="text-base">{courseAnalytics?.averageProgress || 0}% completed</p>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">Estimated Time</h2>
+                  {isEditing ? (
+                    <Input 
+                      value={courseData.estimatedTime}
+                      onChange={e => setCourseData({...courseData, estimatedTime: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-gray-700">{courseData.estimatedTime}</p>
+                  )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">Topic Structure</CardTitle>
-              <CardDescription>All topics and subtopics in this course</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {course.topics.map((topic, topicIndex) => (
-                  <div key={topic.id} className="border rounded-lg p-4">
-                    <h3 className="text-lg font-medium mb-4">
-                      {topicIndex + 1}. {topic.name}
-                    </h3>
-                    
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]">No.</TableHead>
-                          <TableHead>Subtopic Name</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {topic.subtopics.map((subtopic, subtopicIndex) => (
-                          <TableRow key={subtopic.id}>
-                            <TableCell className="font-medium">{subtopicIndex + 1}</TableCell>
-                            <TableCell>{subtopic.name}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+              
+              <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
+                <h2 className="text-xl font-semibold">Course Stats</h2>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-muted-foreground">Enrolled Students</span>
+                      <span className="text-sm font-medium">{selectedCourse.studentsCount}</span>
+                    </div>
                   </div>
-                ))}
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm text-muted-foreground">Average Progress</span>
+                      <span className="text-sm font-medium">{selectedCourse.averageProgress}%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-lg text-muted-foreground">Course not found.</p>
+            <Button 
+              onClick={() => navigate('/admin/courses')} 
+              className="mt-4"
+            >
+              Return to Courses
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );
