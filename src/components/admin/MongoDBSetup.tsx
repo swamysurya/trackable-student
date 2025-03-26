@@ -1,16 +1,43 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { setMongoConnectionString, connectToMongoDB } from '@/utils/mongoDb';
+import { setMongoConnectionString, connectToMongoDB, isMongoDBConnected } from '@/utils/mongoDb';
 import { useToast } from '@/hooks/use-toast';
 
 const MongoDBSetup: React.FC = () => {
   const [connectionString, setConnectionString] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connected, setConnected] = useState(false);
   const { toast } = useToast();
+
+  // Check if already connected on mount
+  useEffect(() => {
+    setConnected(isMongoDBConnected());
+    
+    const savedConnection = localStorage.getItem('mongodb_connection_string');
+    if (savedConnection) {
+      setConnectionString(savedConnection);
+      if (!isMongoDBConnected()) {
+        handleAutoConnect(savedConnection);
+      }
+    }
+  }, []);
+
+  const handleAutoConnect = async (connString: string) => {
+    try {
+      setMongoConnectionString(connString);
+      await connectToMongoDB();
+      setConnected(true);
+      toast({
+        title: 'Connected',
+        description: 'Automatically connected to MongoDB'
+      });
+    } catch (error) {
+      console.error('Auto-connection error:', error);
+    }
+  };
 
   const handleConnect = async () => {
     if (!connectionString) {
@@ -27,10 +54,10 @@ const MongoDBSetup: React.FC = () => {
       setMongoConnectionString(connectionString);
       await connectToMongoDB();
       localStorage.setItem('mongodb_connection_string', connectionString);
-      setIsConnected(true);
+      setConnected(true);
       toast({
         title: 'Connected',
-        description: 'Successfully connected to MongoDB',
+        description: 'Successfully connected to MongoDB (mock)',
       });
     } catch (error) {
       console.error('Error connecting to MongoDB:', error);
@@ -44,33 +71,14 @@ const MongoDBSetup: React.FC = () => {
     }
   };
 
-  // Try to connect on component mount if connection string exists
-  React.useEffect(() => {
-    const savedConnection = localStorage.getItem('mongodb_connection_string');
-    if (savedConnection) {
-      setConnectionString(savedConnection);
-      (async () => {
-        try {
-          setMongoConnectionString(savedConnection);
-          await connectToMongoDB();
-          setIsConnected(true);
-          toast({
-            title: 'Connected',
-            description: 'Automatically connected to MongoDB'
-          });
-        } catch (error) {
-          console.error('Auto-connection error:', error);
-        }
-      })();
-    }
-  }, [toast]);
-
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>MongoDB Connection</CardTitle>
         <CardDescription>
-          Enter your MongoDB connection string to enable real-time data storage
+          Enter your MongoDB connection string to enable data storage
+          {process.env.NODE_ENV === 'development' && 
+            " (Note: In development mode, this uses a browser-compatible mock implementation)"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -92,12 +100,12 @@ const MongoDBSetup: React.FC = () => {
       <CardFooter>
         <Button 
           onClick={handleConnect} 
-          disabled={isConnecting || isConnected}
+          disabled={isConnecting || connected}
           className="w-full"
         >
           {isConnecting 
             ? 'Connecting...' 
-            : isConnected 
+            : connected 
               ? 'Connected to MongoDB' 
               : 'Connect to MongoDB'}
         </Button>
