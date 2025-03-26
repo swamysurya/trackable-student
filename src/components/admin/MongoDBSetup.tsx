@@ -57,7 +57,9 @@ const MongoDBSetup: React.FC = () => {
       setConnected(true);
       toast({
         title: 'Connected',
-        description: 'Successfully connected to MongoDB (mock)',
+        description: process.env.NODE_ENV === 'development' 
+          ? 'Successfully connected to MongoDB (mock)' 
+          : 'Successfully connected to MongoDB',
       });
     } catch (error) {
       console.error('Error connecting to MongoDB:', error);

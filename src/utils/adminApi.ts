@@ -124,7 +124,7 @@ export const getAllStudents = async () => {
     const db = getDatabase();
     await ensureCollectionsSetup();
     
-    const students = await db.collection('students').find({}).toArray();
+    const students = await db.collection('students').find().toArray();
     return students;
   } catch (error) {
     console.error('Error fetching students from MongoDB:', error);
@@ -179,10 +179,10 @@ export const getStudentAnalytics = async () => {
     await ensureCollectionsSetup();
     
     // Get all students
-    const students = await db.collection('students').find({}).toArray();
+    const students = await db.collection('students').find().toArray();
     
     // Get all courses
-    const courses = await db.collection('courses').find({}).toArray();
+    const courses = await db.collection('courses').find().toArray();
     
     // Calculate analytics
     const totalStudents = students.length;
