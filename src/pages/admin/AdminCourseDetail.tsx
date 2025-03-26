@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import AdminNavbar from '@/components/admin/AdminNavbar';
+import MongoDBSetup from '@/components/admin/MongoDBSetup';
 import { getStudentAnalytics, updateCourse, deleteCourse } from '@/utils/adminApi';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,7 +24,7 @@ const AdminCourseDetail = () => {
     estimatedTime: '',
   });
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['courseDetails', courseId],
     queryFn: getStudentAnalytics
   });
@@ -35,9 +36,9 @@ const AdminCourseDetail = () => {
       if (course) {
         setCourseData({
           name: course.name,
-          description: 'A comprehensive course for students', // Set a default description since it's not in the API response
-          prerequisites: 'None',
-          estimatedTime: '8 weeks',
+          description: course.description || 'A comprehensive course for students', // Set a default description since it's not in the API response
+          prerequisites: course.prerequisites || 'None',
+          estimatedTime: course.estimatedTime || '8 weeks',
         });
       }
     }
@@ -51,6 +52,8 @@ const AdminCourseDetail = () => {
         title: 'Course updated',
         description: 'The course has been successfully updated.',
       });
+      // Refetch data to show updated info
+      refetch();
     } catch (error) {
       toast({
         title: 'Error',
@@ -94,6 +97,11 @@ const AdminCourseDetail = () => {
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back to Courses
         </Button>
+        
+        {/* MongoDB Setup Card */}
+        <div className="mb-8">
+          <MongoDBSetup />
+        </div>
         
         {isLoading ? (
           <div className="animate-pulse">
