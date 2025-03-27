@@ -32,7 +32,7 @@ const MongoDBSetup: React.FC = () => {
       setConnected(true);
       toast({
         title: 'Connected',
-        description: 'Automatically connected to MongoDB'
+        description: 'Automatically connected to MongoDB Atlas'
       });
     } catch (error) {
       console.error('Auto-connection error:', error);
@@ -43,7 +43,7 @@ const MongoDBSetup: React.FC = () => {
     if (!connectionString) {
       toast({
         title: 'Error',
-        description: 'Please enter a MongoDB connection string',
+        description: 'Please enter a MongoDB Atlas connection string',
         variant: 'destructive'
       });
       return;
@@ -57,15 +57,13 @@ const MongoDBSetup: React.FC = () => {
       setConnected(true);
       toast({
         title: 'Connected',
-        description: process.env.NODE_ENV === 'development' 
-          ? 'Successfully connected to MongoDB (mock)' 
-          : 'Successfully connected to MongoDB',
+        description: 'Successfully connected to MongoDB Atlas database "students_data"',
       });
     } catch (error) {
       console.error('Error connecting to MongoDB:', error);
       toast({
         title: 'Connection Error',
-        description: error instanceof Error ? error.message : 'Failed to connect to MongoDB',
+        description: error instanceof Error ? error.message : 'Failed to connect to MongoDB Atlas',
         variant: 'destructive'
       });
     } finally {
@@ -76,11 +74,9 @@ const MongoDBSetup: React.FC = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>MongoDB Connection</CardTitle>
+        <CardTitle>MongoDB Atlas Connection</CardTitle>
         <CardDescription>
-          Enter your MongoDB connection string to enable data storage
-          {process.env.NODE_ENV === 'development' && 
-            " (Note: In development mode, this uses a browser-compatible mock implementation)"}
+          Enter your MongoDB Atlas connection string to enable data storage in the "students_data" database
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -108,8 +104,8 @@ const MongoDBSetup: React.FC = () => {
           {isConnecting 
             ? 'Connecting...' 
             : connected 
-              ? 'Connected to MongoDB' 
-              : 'Connect to MongoDB'}
+              ? 'Connected to MongoDB Atlas' 
+              : 'Connect to MongoDB Atlas'}
         </Button>
       </CardFooter>
     </Card>
@@ -117,3 +113,4 @@ const MongoDBSetup: React.FC = () => {
 };
 
 export default MongoDBSetup;
+
