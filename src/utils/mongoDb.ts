@@ -100,16 +100,22 @@ const getRegisteredUsers = () => {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('user_')) {
-        const userData = JSON.parse(localStorage.getItem(key) || '{}');
-        if (userData.id && userData.name && userData.email) {
-          users.push({
-            id: userData.id,
-            name: userData.name,
-            email: userData.email,
-            password: userData.password || 'password123',
-            overallProgress: userData.overallProgress || 0,
-            courses: userData.courses || []
-          });
+        try {
+          const userData = JSON.parse(localStorage.getItem(key) || '{}');
+          if (userData.id && userData.name && userData.email) {
+            users.push({
+              id: userData.id,
+              name: userData.name,
+              email: userData.email,
+              password: userData.password || 'password123',
+              overallProgress: userData.overallProgress || 0,
+              courses: userData.courses || []
+            });
+          }
+        } catch (error) {
+          console.error(`Error parsing user data for key ${key}:`, error);
+          // Continue with other keys even if one fails
+          continue;
         }
       }
     }
@@ -320,4 +326,3 @@ export const isMongoDBConnected = () => {
   }
   return isConnected;
 };
-

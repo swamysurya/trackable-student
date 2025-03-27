@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Shield, LogIn } from 'lucide-react';
 import { adminLogin } from '@/utils/adminApi';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -22,6 +23,17 @@ const AdminLogin = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  
+  // Check if already logged in as admin
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    const role = localStorage.getItem('user_role');
+    
+    if (token && role === 'Admin') {
+      navigate('/admin/dashboard');
+    }
+  }, [navigate, user]);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -38,7 +50,7 @@ const AdminLogin = () => {
       
       // Store admin token and data
       localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('user_role', response.user.role);
+      localStorage.setItem('user_role', 'Admin');
       
       toast({
         title: 'Welcome, Admin',

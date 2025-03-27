@@ -1,16 +1,24 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Check } from 'lucide-react';
-import { getDatabase } from '@/utils/mongoDb';
+import { getDatabase, isMongoDBConnected } from '@/utils/mongoDb';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const DatabaseSeeder = () => {
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedingResult, setSeedingResult] = useState<{ success: boolean; message: string } | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDbConnected, setIsDbConnected] = useState(false);
+  
+  useEffect(() => {
+    // Check connection status when component mounts
+    setIsDbConnected(isMongoDBConnected());
+  }, []);
 
   const sampleStudentsData = [
     {
@@ -74,6 +82,10 @@ const DatabaseSeeder = () => {
     setSeedingResult(null);
 
     try {
+      if (!isMongoDBConnected()) {
+        throw new Error("MongoDB is not connected. Please connect first before seeding data.");
+      }
+      
       const db = getDatabase();
       
       // Clear existing student data
@@ -124,6 +136,15 @@ const DatabaseSeeder = () => {
         title: 'Database Seeded',
         description: 'Successfully added 5 sample students to the database.',
       });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      
+      // Log the seeded data for verification
+      console.log('Seeded students:', sampleStudentsData);
+      
     } catch (error) {
       console.error('Error seeding database:', error);
       setSeedingResult({
@@ -155,6 +176,16 @@ const DatabaseSeeder = () => {
           This is useful for testing the admin dashboard and student management features.
         </p>
         
+        {!isDbConnected && (
+          <Alert className="mb-4 border-amber-500">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertTitle>MongoDB Not Connected</AlertTitle>
+            <AlertDescription>
+              You need to connect to MongoDB first before seeding data.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {seedingResult && (
           <Alert className={seedingResult.success ? "border-green-500" : "border-destructive"}>
             <div className="flex items-center gap-2">
@@ -168,11 +199,23 @@ const DatabaseSeeder = () => {
             <AlertDescription>{seedingResult.message}</AlertDescription>
           </Alert>
         )}
+        
+        <div className="mt-4 border-t pt-4">
+          <h4 className="text-sm font-medium mb-2">Student Login Credentials</h4>
+          <div className="text-sm text-muted-foreground">
+            <p>All seeded students have the password: <span className="font-medium">password123</span></p>
+            <ul className="mt-2 space-y-1">
+              {sampleStudentsData.map(student => (
+                <li key={student.id}>{student.name}: <span className="font-medium">{student.email}</span></li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </CardContent>
       <CardFooter>
         <Button 
           onClick={seedDatabase} 
-          disabled={isSeeding}
+          disabled={isSeeding || !isDbConnected}
           variant="default"
           className="w-full"
         >
