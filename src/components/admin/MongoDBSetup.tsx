@@ -7,14 +7,31 @@ import { setMongoConnectionString, connectToMongoDB, isMongoDBConnected } from '
 import { useToast } from '@/hooks/use-toast';
 import { seedStudentData, getTestCredentials } from '@/utils/seedDatabase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+
+const connectionSchema = z.object({
+  uri: z.string().min(1, "Connection string is required"),
+  password: z.string().min(1, "Password is required")
+});
 
 const MongoDBSetup: React.FC = () => {
-  const [connectionString, setConnectionString] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [isSeedingDatabase, setIsSeedingDatabase] = useState(false);
   const [testCredentials, setTestCredentials] = useState<any[]>([]);
   const { toast } = useToast();
+
+  // Create form with default URI and password field
+  const form = useForm<z.infer<typeof connectionSchema>>({
+    resolver: zodResolver(connectionSchema),
+    defaultValues: {
+      uri: 'mongodb+srv://manikantaswamyamjuri:<db_password>@cluster0.hcc3w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+      password: ''
+    }
+  });
 
   // Check if already connected on mount
   useEffect(() => {
@@ -22,7 +39,7 @@ const MongoDBSetup: React.FC = () => {
     
     const savedConnection = localStorage.getItem('mongodb_connection_string');
     if (savedConnection) {
-      setConnectionString(savedConnection);
+      form.setValue('uri', savedConnection);
       if (!isMongoDBConnected()) {
         handleAutoConnect(savedConnection);
       }
@@ -43,18 +60,14 @@ const MongoDBSetup: React.FC = () => {
     }
   };
 
-  const handleConnect = async () => {
-    if (!connectionString) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a MongoDB Atlas connection string',
-        variant: 'destructive'
-      });
-      return;
-    }
-
+  const onSubmit = async (values: z.infer<typeof connectionSchema>) => {
     setIsConnecting(true);
+    
     try {
+      // Replace placeholder with actual password
+      const connectionString = values.uri.replace('<db_password>', values.password);
+      
+      // Save and connect
       setMongoConnectionString(connectionString);
       await connectToMongoDB();
       localStorage.setItem('mongodb_connection_string', connectionString);
@@ -128,34 +141,58 @@ const MongoDBSetup: React.FC = () => {
         
         <TabsContent value="connection">
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  type="password"
-                  placeholder="mongodb+srv://username:password@cluster.mongodb.net"
-                  value={connectionString}
-                  onChange={(e) => setConnectionString(e.target.value)}
-                  className="w-full"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="uri"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Connection String</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Database Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Your Atlas database password" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <p className="text-xs text-muted-foreground">
-                  Your connection string is stored locally and never shared
+                  Your connection information is stored locally and never shared
                 </p>
-              </div>
-            </div>
+                
+                <Button 
+                  type="submit"
+                  disabled={isConnecting || connected}
+                  className="w-full"
+                >
+                  {isConnecting 
+                    ? 'Connecting...' 
+                    : connected 
+                      ? 'Connected to MongoDB Atlas' 
+                      : 'Connect to MongoDB Atlas'}
+                </Button>
+              </form>
+            </Form>
           </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={handleConnect} 
-              disabled={isConnecting || connected}
-              className="w-full"
-            >
-              {isConnecting 
-                ? 'Connecting...' 
-                : connected 
-                  ? 'Connected to MongoDB Atlas' 
-                  : 'Connect to MongoDB Atlas'}
-            </Button>
-          </CardFooter>
         </TabsContent>
         
         <TabsContent value="test-data">
