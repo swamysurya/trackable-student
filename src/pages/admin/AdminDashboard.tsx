@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AdminNavbar from '@/components/admin/AdminNavbar';
+import MongoDBSetup from '@/components/admin/MongoDBSetup';
 import { getStudentAnalytics, getAllStudents } from '@/utils/adminApi';
 import { Users, BookOpen, TrendingUp, Award } from 'lucide-react';
 
@@ -27,6 +28,12 @@ const AdminDashboard = () => {
       
       <main className="container mx-auto px-4 py-16 mt-10">
         <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+        
+        {/* MongoDB Connection Setup */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Database Connection</h2>
+          <MongoDBSetup />
+        </div>
         
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
