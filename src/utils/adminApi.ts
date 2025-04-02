@@ -1,4 +1,3 @@
-
 import { getDatabase } from './mongoDb';
 
 // We need to define delay directly in this file instead of importing it
@@ -337,10 +336,10 @@ export const updateStudentProgress = async (studentId: string, courseId: string,
     const courseIndex = (student.courses || []).findIndex((c: any) => c.id === courseId);
     
     if (courseIndex >= 0) {
-      // Update existing course progress
+      // Update existing course progress - using filter with id property only
       await db.collection('students').updateOne(
-        { id: studentId, "courses.id": courseId },
-        { $set: { "courses.$.progress": progress } }
+        { id: studentId },
+        { $set: { [`courses.${courseIndex}.progress`]: progress } }
       );
     } else {
       // Get course name

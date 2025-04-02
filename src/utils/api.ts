@@ -169,9 +169,9 @@ export const login = async (email: string, password: string) => {
   // First check if MongoDB is connected
   if (isMongoDBConnected()) {
     try {
-      // Check MongoDB for the user
+      // Check MongoDB for the user - email filter only, no ID needed
       const db = getDatabase();
-      const user = await db.collection('students').findOne({ email: email });
+      const user = await db.collection('students').findOne({ email });
       
       if (user && user.password === password) {
         // Create a clean user object (without password)

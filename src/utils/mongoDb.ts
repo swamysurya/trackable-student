@@ -1,4 +1,3 @@
-
 // This file provides MongoDB implementation for the browser environment
 // For production with MongoDB Atlas
 
@@ -155,7 +154,7 @@ export const getDatabase = () => {
               return mockStudents;
             }
           }),
-          findOne: async (filter: { id?: string; email?: string }) => {
+          findOne: async (filter: any) => {
             if (!isConnected) {
               console.warn("MongoDB not connected, using localStorage data");
             }
@@ -163,18 +162,32 @@ export const getDatabase = () => {
             const registeredUsers = getRegisteredUsers();
             let user = null;
             
-            // Search by ID or email
+            // Handle different filter types
             if (filter.id) {
               user = registeredUsers.find(student => student.id === filter.id);
             } else if (filter.email) {
               user = registeredUsers.find(student => student.email === filter.email);
+            } else if (filter["courses.id"]) {
+              // Handle dot notation for nested properties
+              user = registeredUsers.find(student => 
+                (student.courses || []).some((c: any) => c.id === filter["courses.id"])
+              );
             }
             
-            return user || (filter.id 
-              ? mockStudents.find(student => student.id === filter.id) 
-              : filter.email 
-                ? mockStudents.find(student => student.email === filter.email)
-                : null);
+            // If not found in registered users, try mock data
+            if (!user) {
+              if (filter.id) {
+                user = mockStudents.find(student => student.id === filter.id);
+              } else if (filter.email) {
+                user = mockStudents.find(student => student.email === filter.email);
+              } else if (filter["courses.id"]) {
+                user = mockStudents.find(student => 
+                  (student.courses || []).some((c: any) => c.id === filter["courses.id"])
+                );
+              }
+            }
+            
+            return user || null;
           },
           insertOne: async (document: any) => {
             if (!isConnected) {
@@ -200,15 +213,19 @@ export const getDatabase = () => {
             
             return { insertedCount: documents.length };
           },
-          updateOne: async (filter: { id?: string; email?: string }, update: any) => {
+          updateOne: async (filter: any, update: any) => {
             const registeredUsers = getRegisteredUsers();
             let index = -1;
             
-            // Find by ID or email
+            // Find by various filter properties
             if (filter.id) {
               index = registeredUsers.findIndex(student => student.id === filter.id);
             } else if (filter.email) {
               index = registeredUsers.findIndex(student => student.email === filter.email);
+            } else if (filter["courses.id"]) {
+              index = registeredUsers.findIndex(student => 
+                (student.courses || []).some((c: any) => c.id === filter["courses.id"])
+              );
             }
             
             if (index !== -1) {
@@ -236,6 +253,10 @@ export const getDatabase = () => {
                 mockIndex = mockStudents.findIndex(student => student.id === filter.id);
               } else if (filter.email) {
                 mockIndex = mockStudents.findIndex(student => student.email === filter.email);
+              } else if (filter["courses.id"]) {
+                mockIndex = mockStudents.findIndex(student => 
+                  (student.courses || []).some((c: any) => c.id === filter["courses.id"])
+                );
               }
               
               if (mockIndex !== -1) {
@@ -253,7 +274,7 @@ export const getDatabase = () => {
             
             return { matchedCount: 0, modifiedCount: 0 };
           },
-          deleteOne: async (filter: { id?: string; email?: string }) => {
+          deleteOne: async (filter: any) => {
             // Remove from localStorage if exists
             if (filter.id) {
               const key = `user_${filter.id}`;
