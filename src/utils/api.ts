@@ -1,4 +1,3 @@
-
 // Mock API utility for the Student Progress Tracking System
 // In a real application, this would connect to a backend server
 
@@ -172,7 +171,6 @@ export const login = async (email: string, password: string) => {
     try {
       // Check MongoDB for the user
       const db = getDatabase();
-      // Use a properly typed query object with a string key
       const user = await db.collection('students').findOne({ email: email });
       
       if (user && user.password === password) {

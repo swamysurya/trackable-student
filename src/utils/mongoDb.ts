@@ -155,14 +155,26 @@ export const getDatabase = () => {
               return mockStudents;
             }
           }),
-          findOne: async ({ id }: { id: string }) => {
+          findOne: async (filter: { id?: string; email?: string }) => {
             if (!isConnected) {
               console.warn("MongoDB not connected, using localStorage data");
             }
             
             const registeredUsers = getRegisteredUsers();
-            const user = registeredUsers.find(student => student.id === id);
-            return user || mockStudents.find(student => student.id === id) || null;
+            let user = null;
+            
+            // Search by ID or email
+            if (filter.id) {
+              user = registeredUsers.find(student => student.id === filter.id);
+            } else if (filter.email) {
+              user = registeredUsers.find(student => student.email === filter.email);
+            }
+            
+            return user || (filter.id 
+              ? mockStudents.find(student => student.id === filter.id) 
+              : filter.email 
+                ? mockStudents.find(student => student.email === filter.email)
+                : null);
           },
           insertOne: async (document: any) => {
             if (!isConnected) {
@@ -188,9 +200,16 @@ export const getDatabase = () => {
             
             return { insertedCount: documents.length };
           },
-          updateOne: async (filter: any, update: any) => {
+          updateOne: async (filter: { id?: string; email?: string }, update: any) => {
             const registeredUsers = getRegisteredUsers();
-            const index = registeredUsers.findIndex(student => student.id === filter.id);
+            let index = -1;
+            
+            // Find by ID or email
+            if (filter.id) {
+              index = registeredUsers.findIndex(student => student.id === filter.id);
+            } else if (filter.email) {
+              index = registeredUsers.findIndex(student => student.email === filter.email);
+            }
             
             if (index !== -1) {
               // Update the registered user in localStorage
@@ -211,7 +230,14 @@ export const getDatabase = () => {
             
             if (!isConnected) {
               // Fall back to mock data if no registered user found
-              const mockIndex = mockStudents.findIndex(student => student.id === filter.id);
+              let mockIndex = -1;
+              
+              if (filter.id) {
+                mockIndex = mockStudents.findIndex(student => student.id === filter.id);
+              } else if (filter.email) {
+                mockIndex = mockStudents.findIndex(student => student.email === filter.email);
+              }
+              
               if (mockIndex !== -1) {
                 if (update.$set) {
                   mockStudents[mockIndex] = { ...mockStudents[mockIndex], ...update.$set };
@@ -227,16 +253,28 @@ export const getDatabase = () => {
             
             return { matchedCount: 0, modifiedCount: 0 };
           },
-          deleteOne: async (filter: any) => {
+          deleteOne: async (filter: { id?: string; email?: string }) => {
             // Remove from localStorage if exists
-            const key = `user_${filter.id}`;
-            if (localStorage.getItem(key)) {
-              localStorage.removeItem(key);
+            if (filter.id) {
+              const key = `user_${filter.id}`;
+              if (localStorage.getItem(key)) {
+                localStorage.removeItem(key);
+              }
+            } else if (filter.email) {
+              const users = getRegisteredUsers();
+              const user = users.find(u => u.email === filter.email);
+              if (user) {
+                localStorage.removeItem(`user_${user.id}`);
+              }
             }
             
             if (!isConnected) {
               const initialLength = mockStudents.length;
-              mockStudents = mockStudents.filter(student => student.id !== filter.id);
+              if (filter.id) {
+                mockStudents = mockStudents.filter(student => student.id !== filter.id);
+              } else if (filter.email) {
+                mockStudents = mockStudents.filter(student => student.email !== filter.email);
+              }
               return { deletedCount: initialLength - mockStudents.length };
             }
             
