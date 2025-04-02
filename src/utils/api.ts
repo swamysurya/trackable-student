@@ -1,8 +1,8 @@
-
 // Mock API utility for the Student Progress Tracking System
 // In a real application, this would connect to a backend server
 
 import { toast } from '@/hooks/use-toast';
+import { getDatabase, isMongoDBConnected } from '@/utils/mongoDb';
 
 // Mock data for courses
 const mockCourses = [
@@ -166,6 +166,32 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const login = async (email: string, password: string) => {
   await delay(800);
   
+  // First check if MongoDB is connected
+  if (isMongoDBConnected()) {
+    try {
+      // Check MongoDB for the user
+      const db = getDatabase();
+      const user = await db.collection('students').findOne({ email });
+      
+      if (user && user.password === password) {
+        // Create a clean user object (without password)
+        const { password: _, ...cleanUser } = user;
+        
+        return {
+          token: 'mongodb-token-' + Date.now(),
+          user: {
+            ...cleanUser,
+            role: 'Student'
+          },
+        };
+      }
+    } catch (error) {
+      console.error('MongoDB login error:', error);
+      // Fall back to mock data if MongoDB login fails
+    }
+  }
+  
+  // Fall back to mock users if MongoDB is not connected or user not found
   const user = mockUsers.find(u => u.email === email && u.password === password);
   
   if (!user) {

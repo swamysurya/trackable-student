@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -58,7 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginUser = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // In a real app, this would be an API call
       const response = await login(email, password);
       localStorage.setItem('auth_token', response.token);
       // Ensure user data has the correct role type
@@ -87,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'Invalid email or password. Please try again.',
         variant: 'destructive',
       });
-      throw error;
+      throw error; // Re-throw the error so the login component can handle it
     } finally {
       setIsLoading(false);
     }
