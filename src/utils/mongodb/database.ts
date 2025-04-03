@@ -32,6 +32,7 @@ export const getDatabase = () => {
         find: () => ({ toArray: async () => [] }),
         findOne: async () => null,
         insertOne: async () => ({ insertedId: null }),
+        insertMany: async () => ({ insertedCount: 0 }),
         updateOne: async () => ({ matchedCount: 0, modifiedCount: 0 }),
         deleteOne: async () => ({ deletedCount: 0 }),
         countDocuments: async () => 0
