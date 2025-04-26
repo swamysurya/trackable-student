@@ -1,5 +1,6 @@
 
 import { getDatabase } from '../mongodb';
+import { ensureCollectionsSetup } from './analytics';
 
 export const getAllStudents = async () => {
   try {
